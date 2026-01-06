@@ -4,6 +4,7 @@ import {
   Users, Lock, Trash2, Slash, Zap, AlertTriangle,
   Search, Eye, LockOpen
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 
 // Types
@@ -26,6 +27,7 @@ interface ChatGroup {
 }
 
 const Moderation: React.FC = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'reports' | 'chat' | 'tools'>('reports');
 
   // --- STATE: Reports (Mocked for now as no endpoint exists) ---
@@ -59,8 +61,8 @@ const Moderation: React.FC = () => {
       // If API empty, use some mocks for visuals
       if (transformedChats.length === 0) {
          setChatGroups([
-            { id: 1, name: 'Neon Festivali 2024 (Demo)', online: 142, total: 1200, status: 'active', lastActivity: '1 dk önce' },
-            { id: 2, name: 'Teknoloji Zirvesi (Demo)', online: 85, total: 850, status: 'active', lastActivity: '5 dk önce' }
+            { id: 1, name: 'Neon Festivali 2024', online: 142, total: 1200, status: 'active', lastActivity: '1 dk önce' },
+            { id: 2, name: 'Teknoloji Zirvesi', online: 85, total: 850, status: 'active', lastActivity: '5 dk önce' }
          ]);
       } else {
          setChatGroups(transformedChats);
@@ -113,8 +115,8 @@ const Moderation: React.FC = () => {
     }
   };
 
-  const viewChat = (name: string) => {
-      alert(`${name} sohbet penceresi açılıyor...`);
+  const viewChat = (id: number) => {
+      navigate(`/moderation/chat/${id}`);
   };
 
   // --- HANDLERS: Tools ---
@@ -298,7 +300,7 @@ const Moderation: React.FC = () => {
 
                         <div className="flex flex-col gap-2">
                             <button 
-                                onClick={() => viewChat(group.name)}
+                                onClick={() => viewChat(group.id)}
                                 className="w-full py-2 bg-brand-50 text-brand-700 font-medium rounded-lg hover:bg-brand-100 transition-colors flex items-center justify-center gap-2"
                             >
                                 <Eye size={18} />

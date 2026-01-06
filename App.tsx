@@ -8,6 +8,7 @@ import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import CreateEvent from './pages/CreateEvent';
 import Moderation from './pages/Moderation';
+import ChatDetail from './pages/ChatDetail';
 import { EventProvider } from './context/EventContext';
 
 const App: React.FC = () => {
@@ -25,6 +26,7 @@ const App: React.FC = () => {
                 <Route path="/events/new" element={<CreateEvent />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/moderation" element={<Moderation />} />
+                <Route path="/moderation/chat/:id" element={<ChatDetail />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
