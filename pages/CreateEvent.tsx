@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Calendar, MapPin, Image as ImageIcon, Ticket, 
   Video, Plus, Trash2, Eye, Save, Send, AlertCircle, Info, CheckCircle2,
-  ExternalLink
+  ExternalLink, Sparkles, Wand2, Loader2
 } from 'lucide-react';
 import { useEvents } from '../context/EventContext';
 import { EventStatus, Event } from '../types';
+import { GoogleGenAI } from "@google/genai";
 
 type Step = 'info' | 'media' | 'tickets' | 'preview';
 
@@ -37,6 +38,10 @@ const CreateEvent: React.FC = () => {
     videoUrl: '',
     tickets: [] as TicketTypeData[]
   });
+
+  // AI Generation State
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -76,6 +81,61 @@ const CreateEvent: React.FC = () => {
 
   const youtubeId = getYouTubeId(formData.videoUrl);
 
+  const handleGenerateImage = async () => {
+    if (!aiPrompt.trim()) return;
+    
+    setIsGeneratingImage(true);
+    try {
+        // API Key Selection for Veo/Imagen models
+        const hasKey = await (window as any).aistudio?.hasSelectedApiKey();
+        if (!hasKey) {
+             const success = await (window as any).aistudio?.openSelectKey();
+             if (!success) {
+                 setIsGeneratingImage(false);
+                 return;
+             }
+        }
+        
+        // Re-check or assuming process.env.API_KEY is now populated by the environment wrapper
+        // Creating new instance to ensure key is fresh
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-pro-image-preview',
+            contents: {
+                parts: [{ text: aiPrompt }]
+            },
+            config: {
+                imageConfig: {
+                    aspectRatio: "16:9",
+                    imageSize: "2K" // High resolution request (2K) to improve quality
+                }
+            }
+        });
+        
+        // Extract image
+        let imageFound = false;
+        for (const part of response.candidates?.[0]?.content?.parts || []) {
+            if (part.inlineData) {
+                const base64String = part.inlineData.data;
+                const imageUrl = `data:image/png;base64,${base64String}`;
+                setFormData(prev => ({ ...prev, imageUrl }));
+                imageFound = true;
+                break;
+            }
+        }
+        if (!imageFound) {
+            alert("Görsel oluşturulamadı, lütfen tekrar deneyin.");
+        }
+
+    } catch (error) {
+        console.error("Image generation failed", error);
+        alert("Görsel oluşturulamadı. Lütfen tekrar deneyin.");
+    } finally {
+        setIsGeneratingImage(false);
+    }
+  };
+
   const handleSave = async (status: EventStatus) => {
     setIsSaving(true);
     
@@ -88,7 +148,7 @@ const CreateEvent: React.FC = () => {
         status: status,
         ticketTypes: formData.tickets,
         revenue: 0,
-        image: formData.imageUrl || `https://picsum.photos/400/200?random=${Date.now()}`
+        image: formData.imageUrl || `https://picsum.photos/1200/600?random=${Date.now()}`
     };
 
     try {
@@ -255,15 +315,71 @@ const CreateEvent: React.FC = () => {
           <div className="p-8 animate-in slide-in-from-right-4 duration-300">
              <h2 className="text-lg font-bold text-slate-900 mb-6">Görsel ve Medya</h2>
              <div className="space-y-8">
+                
+                {/* AI Image Generation Section */}
+                <div className="bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-100 rounded-xl p-6">
+                    <div className="flex items-start gap-4">
+                        <div className="p-3 bg-white rounded-lg shadow-sm text-violet-600">
+                            <Sparkles size={24} />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-base font-bold text-slate-900">AI ile Yüksek Kaliteli Afiş Oluştur</h3>
+                            <p className="text-sm text-slate-600 mb-4">Etkinliğinizi anlatan birkaç kelime yazın, yapay zeka sizin için 2K çözünürlükte profesyonel bir afiş tasarlasın.</p>
+                            
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={aiPrompt}
+                                    onChange={(e) => setAiPrompt(e.target.value)}
+                                    placeholder="Örn: Neon ışıklar altında dans eden kalabalık, fütüristik şehir festivali..."
+                                    className="flex-1 px-4 py-2.5 bg-white border border-violet-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleGenerateImage()}
+                                />
+                                <button 
+                                    onClick={handleGenerateImage}
+                                    disabled={isGeneratingImage || !aiPrompt.trim()}
+                                    className="px-6 py-2.5 bg-violet-600 text-white font-medium rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 min-w-[160px] justify-center"
+                                >
+                                    {isGeneratingImage ? (
+                                        <>
+                                            <Loader2 size={18} className="animate-spin" />
+                                            Çiziliyor...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Wand2 size={18} />
+                                            Oluştur (2K)
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">Etkinlik Afişi</label>
-                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer group">
-                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors text-slate-400">
-                            <ImageIcon size={32} />
-                        </div>
-                        <p className="text-slate-900 font-medium">Görseli sürükleyip bırakın</p>
-                        <p className="text-slate-500 text-sm mt-1">veya dosya seçmek için tıklayın</p>
-                        <p className="text-xs text-slate-400 mt-4">PNG, JPG (Max. 5MB)</p>
+                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer group relative overflow-hidden">
+                        {formData.imageUrl ? (
+                             <div className="absolute inset-0 z-10 bg-slate-900 flex items-center justify-center">
+                                <img src={formData.imageUrl} alt="Uploaded" className="h-full w-full object-contain" />
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setFormData({...formData, imageUrl: ''}); }}
+                                    className="absolute top-4 right-4 p-2 bg-black/50 text-white rounded-lg hover:bg-red-600 transition-colors"
+                                >
+                                    <Trash2 size={20} />
+                                </button>
+                             </div>
+                        ) : (
+                            <>
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors text-slate-400">
+                                    <ImageIcon size={32} />
+                                </div>
+                                <p className="text-slate-900 font-medium">Görseli sürükleyip bırakın</p>
+                                <p className="text-slate-500 text-sm mt-1">veya dosya seçmek için tıklayın</p>
+                                <p className="text-xs text-slate-400 mt-4">PNG, JPG (Max. 5MB)</p>
+                            </>
+                        )}
                         <input type="file" className="hidden" />
                     </div>
                 </div>

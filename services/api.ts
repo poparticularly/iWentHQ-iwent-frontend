@@ -57,7 +57,7 @@ const transformEvent = (apiEvent: any): Event => {
     status: mapBackendStatusToFrontend(apiEvent.status || 'DRAFT'), // Assuming API returns a status field even if omitted in summary
     ticketTypes: ticketTypes,
     revenue: 0, // Placeholder as list endpoint doesn't return revenue
-    image: apiEvent.bannerUrl || `https://picsum.photos/400/200?random=${apiEvent.id}`,
+    image: apiEvent.bannerUrl || `https://picsum.photos/1200/600?random=${apiEvent.id}`, // Increased resolution for better quality
   };
 };
 
